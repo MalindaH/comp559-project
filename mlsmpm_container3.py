@@ -3,9 +3,9 @@ import numpy as np
 
 ti.init(arch=ti.gpu)
 
-n_particles, n_grid, n_lines = 9000, 169, 3
+n_particles, n_grid, n_lines = 12000, 200, 6
 dx, inv_dx = 1 / n_grid, float(n_grid)
-dt = 1e-4
+dt = 1e-4 
 gravity = 200
 p_vol, p_rho = (dx * 0.5)**2, 1
 p_mass = p_vol * p_rho # particle mass
@@ -32,8 +32,11 @@ def P2G(): # Particle to grid (P2G)
         w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
         F[p] = (ti.Matrix.identity(float, 2) + dt * C[p]) @ F[p] # deformation gradient update
         h = max(0.1, min(5, ti.exp(10 * (1.0 - Jp[p])))) # Hardening coefficient
+        if material[p] == 1: # jelly
+            h = 0.3
         mu, la = mu_0 * h, lambda_0 * h
-        mu = 0.0
+        if material[p] == 0: # liquid
+            mu = 0.0
         U, sig, V = ti.svd(F[p])
         J = 1.0
         for d in ti.static(range(2)):
@@ -42,8 +45,11 @@ def P2G(): # Particle to grid (P2G)
                 new_sig = min(max(sig[d, d], 1 - 2.5e-2), 1 + 4.5e-3)  # plasticity
             Jp[p] *= sig[d, d] / new_sig
             sig[d, d] = new_sig
-            J *= new_sig 
-        F[p] = ti.Matrix.identity(float, 2) * ti.sqrt(J) # Reset deformation gradient
+            J *= new_sig
+        if material[p] == 0:  # Reset deformation gradient
+            F[p] = ti.Matrix.identity(float, 2) * ti.sqrt(J)
+        elif material[p] == 2:
+            F[p] = U @ sig @ V.transpose() # Reconstruct elastic deformation gradient
         stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (J - 1)
         stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
         affine = stress + p_mass * C[p]
@@ -53,7 +59,6 @@ def P2G(): # Particle to grid (P2G)
             weight = w[i][0] * w[j][1]
             grid_v[base + offset] += weight * (p_mass * v[p] + affine @ dpos)
             grid_m[base + offset] += weight * p_mass
-
 
 @ti.func
 def G2P(): # grid to particle (G2P)
@@ -136,36 +141,39 @@ def substep():
 @ti.kernel
 def initialize():
   for i in range(n_particles):
-    if i < n_particles*2/3:
-        x[i] = [ti.random() * 0.2 + 0.25, ti.random() * 0.2 + 0.45 ]
-        material[i] = 0 # 0,1,2: fluid
-    else:
-        x[i] = [ti.random() * 0.15 + 0.47, ti.random() * 0.15 + 0.55 ]
-        material[i] = 1
+    x[i] = [ti.random() * 0.4 + 0.25, ti.random() * 0.25 + 0.7 ]
+    material[i] = 0 # 0: fluid, 1: jelly, 2: snow
     v[i] = ti.Matrix([0, 0])
     F[i] = ti.Matrix([[1, 0], [0, 1]])
     Jp[i] = 1
   for i in range(n_lines): # add horizontal or vertical lines
     if i==0:
-      lines1[i] = [0.2, 0.15]
-      lines2[i] = [0.2, 0.4]
+      lines1[i] = [0.2, 0.6]
+      lines2[i] = [0.5, 0.6]
     elif i==1:
-      lines1[i] = [0.2, 0.15]
-      lines2[i] = [0.6, 0.15]
+      lines1[i] = [0.2, 0.6]
+      lines2[i] = [0.2, 0.8]
     elif i==2:
-      lines1[i] = [0.6, 0.15]
-      lines2[i] = [0.6, 0.4]
-    # elif i==3:
-    #   lines1[i] = [0.2, 0.4]
-    #   lines2[i] = [0.6, 0.4]
+      lines1[i] = [0.4, 0.35]
+      lines2[i] = [0.7, 0.35]
+    elif i==3:
+      lines1[i] = [0.7, 0.35]
+      lines2[i] = [0.7, 0.65]
+    elif i==4:
+      lines1[i] = [0.15, 0.2]
+      lines2[i] = [0.5, 0.2]
+    elif i==5:
+      lines1[i] = [0.15, 0.2]
+      lines2[i] = [0.15, 0.45]
 
 initialize()
 gui = ti.GUI("Fluid MLS-MPM", res=512, background_color=0x000000)
 while not gui.get_event(ti.GUI.ESCAPE, ti.GUI.EXIT):
     for s in range(int(2e-3 // dt)):
         substep()
-    colors = np.array([0x36eeff, 0x0065b3, 0x0027b3], dtype=np.uint32)
+    colors = np.array([0x36eeff, 0xfca13f, 0xEEEEF0], dtype=np.uint32)
     gui.circles(x.to_numpy(), radius=1.5, color=colors[material.to_numpy()])
     gui.lines(lines1.to_numpy(), lines2.to_numpy(), color = 0x106b06, radius = 2)
     gui.show() # only show gui
     # gui.show(f'{gui.frame:06d}.png') # save image screenshots in current directory
+

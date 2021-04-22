@@ -6,7 +6,7 @@ ti.init(arch=ti.gpu)
 n_particles, n_grid, n_lines = 9000, 200, 3
 dx, inv_dx = 1 / n_grid, float(n_grid)
 dt = 1e-4 
-gravity = 150
+gravity = 200
 p_vol, p_rho = (dx * 0.5)**2, 1
 p_mass = p_vol * p_rho # particle mass
 E, nu = 0.1e4, 0.2 # Young's modulus and Poisson's ratio
@@ -81,26 +81,16 @@ def G2P(): # grid to particle (G2P)
             start = lines1[a]
             end = lines2[a]
             if (start[0] == end[0]): #vertical line
-                # if (start[0] - x[p][0] == 0) and not (start[1] <= x[p][1] <= end[1] or end[1] <= x[p][1] <= start[1]) and (start[1] <= xp_new[1] <= end[1] or end[1] <= xp_new[1] <= start[1]):
-                #     v[p][1] = 0
                 if ((start[0] - x[p][0] >= 0) and (xp_new[0] - start[0] >= 0)) or ((start[0] - x[p][0] <= 0) and (xp_new[0] - start[0] <= 0)):
                     if (start[1] <= x[p][1] <= end[1] or end[1] <= x[p][1] <= start[1]):
-                        # xp_new[0] = x[p][0]
                         v[p][0] = 0
-                        # if not (start[1] <= xp_new[1] <= end[1] or end[1] <= xp_new[1] <= start[1]):
-                        #     v[p][1] = 0
                     elif not (start[1] <= x[p][1] <= end[1] or end[1] <= x[p][1] <= start[1]) and (start[1] <= xp_new[1] <= end[1] or end[1] <= xp_new[1] <= start[1]):
                         v[p][0] = 0
-                        # v[p][1] = 0
             else: # horizontal line, start[1] == end[1]
                 if ((start[1] - x[p][1] >= 0) and (xp_new[1] - start[1] >= 0)) or ((start[1] - x[p][1] <= 0) and (xp_new[1] - start[1] <= 0)):
                     if (start[0] <= x[p][0] <= end[0] or end[0] <= x[p][0] <= start[0]):
-                        # xp_new[1] = x[p][1]
                         v[p][1] = 0
-                        # if not (start[0] <= xp_new[0] <= end[0] or end[0] <= xp_new[0] <= start[0]):
-                        #     v[p][0] = 0
                     elif not (start[0] <= x[p][0] <= end[0] or end[0] <= x[p][0] <= start[0]) and (start[0] <= xp_new[0] <= end[0] or end[0] <= xp_new[0] <= start[0]):
-                        # v[p][0] = 0
                         v[p][1] = 0
         x[p] += dt * v[p] # advection
 
@@ -151,7 +141,7 @@ def substep():
 @ti.kernel
 def initialize():
   for i in range(n_particles):
-    x[i] = [ti.random() * 0.25 + 0.3, ti.random() * 0.25 + 0.25 ]
+    x[i] = [ti.random() * 0.3 + 0.3, ti.random() * 0.3 + 0.25 ]
     # x[i] = [ti.random() * 0.6 + 0.2, ti.random() * 0.45 + 0.45 ]
     material[i] = 0 # 0: fluid, 1: jelly, 2: snow
     v[i] = ti.Matrix([0, 0])

@@ -12,6 +12,8 @@ Run scripts: (with Linux GUI)
 python -u mlsmpm_fluid.py
 ```
 
+Taichi 0.7.5
+
 Python 3.8.2
 
 Windows Subsystem for Linux
