@@ -1,4 +1,4 @@
-# comp559: Fundamentals of Computer Animation
+# COMP559: fundamentals of computer animation
 ## Fluid Simulation Using Moving Least Squares Material Point Method (MLS-MPM)
 
 <img src="./demos/fluid1.gif" alt="fluid1" width="200"/> <img src="./demos/fluid2.gif" alt="fluid2" width="200"/> <img src="./demos/fluids.gif" alt="fluids" width="200"/> <img src="./demos/materials1.gif" alt="materials1" width="200"/> <img src="./demos/materials2.gif" alt="materials2" width="200"/> <img src="./demos/container1.gif" alt="container1" width="200"/> <img src="./demos/container2.gif" alt="container2" width="200"/> <img src="./demos/container3.gif" alt="container3" width="200"/>
